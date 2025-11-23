@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "nola-abi-playground",
     "nola-playground-lib",
     "nola-playground-impl",
 ]

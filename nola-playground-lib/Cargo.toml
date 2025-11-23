@@ -5,4 +5,4 @@ edition = "2024"
 publish = false
 
 [dependencies]
-libc = "0.2"
+nola-abi-playground = { path = "../nola-abi-playground" }
