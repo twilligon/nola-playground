@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "nola-playground-lib",
+    "nola-playground-impl",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[package]
+name = "nola-playground"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+nola-playground-lib = { path = "nola-playground-lib" }
+nola-playground-impl = { path = "nola-playground-impl" }
