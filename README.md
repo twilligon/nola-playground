@@ -1,5 +1,7 @@
 # nola-playground
 
+**⚠️ Total slop, not for human consumption ⚠️**
+
 ## The problem: Rust has no stable ABI
 
 Rust does not have a stable ABI (except when using `#[repr(C)]`). If you pass arbitrary types across an ABI boundary—for example, to or from a dynamically-loaded plugin—they can have *different representations on each side*.
