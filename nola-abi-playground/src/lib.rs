@@ -1,8 +1,13 @@
 #![deny(improper_ctypes)]
 
+use core::ffi::CStr;
+use core::fmt::{Display, Formatter, Result as FmtResult};
+use core::ptr::drop_in_place;
+use std::error::Error;
+
 #[doc(hidden)]
 pub unsafe extern "C-unwind" fn __drop_in_place<T>(ptr: *mut ()) {
-    unsafe { ::core::ptr::drop_in_place(ptr as *mut T) }
+    unsafe { drop_in_place(ptr as *mut T) }
 }
 
 pub unsafe trait AbiRefSafe {}
@@ -18,11 +23,11 @@ pub trait IntoAbiSafe: Sized {
 
 #[derive(Debug)]
 pub struct ResolveError {
-    pub symbol: &'static ::core::ffi::CStr,
+    pub symbol: &'static CStr,
 }
 
-impl ::core::fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+impl Display for ResolveError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
             "failed to resolve symbol: {}",
@@ -31,7 +36,10 @@ impl ::core::fmt::Display for ResolveError {
     }
 }
 
-impl ::std::error::Error for ResolveError {}
+impl Error for ResolveError {}
+
+pub mod dyn_trait;
+pub use dyn_trait::{Dyn, DynBox, DynRef, DynRefMut, VTable};
 
 #[doc(hidden)]
 pub mod abi_safe;

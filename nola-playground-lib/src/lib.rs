@@ -2,75 +2,51 @@
 
 pub trait Summer {
     fn sum(&mut self, v: ::std::vec::Vec<i32>) -> i32;
-
-    #[doc(hidden)]
-    fn __into_dyn_box(self: ::std::boxed::Box<Self>) -> __SummerDynBox<'static>
-    where
-        Self: Sized,
-    {
-        __SummerDynBox {
-            data: ::std::boxed::Box::into_raw(self) as *mut (),
-            vtable: &const {
-                __SummerVtable {
-                    drop: if ::core::mem::needs_drop::<Self>() {
-                        Some(::nola_abi_playground::__drop_in_place::<Self>)
-                    } else {
-                        None
-                    },
-                    size: ::core::mem::size_of::<Self>(),
-                    align: ::core::mem::align_of::<Self>(),
-                    __Summer_sum: __Summer_sum::<Self>,
-                }
-            },
-            phantom: ::core::marker::PhantomData,
-        }
-    }
 }
 
-#[doc(hidden)]
 #[repr(C)]
-#[derive(Debug)]
-#[allow(non_snake_case)]
-pub struct __SummerVtable {
-    pub drop: ::core::option::Option<unsafe extern "C-unwind" fn(*mut ())>,
-    pub size: usize,
-    pub align: usize,
-    pub __Summer_sum: unsafe extern "C-unwind" fn(
+pub struct DynSummer {
+    sum: unsafe extern "C-unwind" fn(
         *mut (),
         ::nola_abi_playground::abi_safe::std::vec::Vec<i32>,
     ) -> i32,
 }
 
-#[doc(hidden)]
-#[repr(C)]
-pub struct __SummerDynBox<'lib> {
-    data: *mut (),
-    vtable: *const __SummerVtable,
-    phantom: ::core::marker::PhantomData<&'lib dyn Summer>,
-}
-
-impl ::core::ops::Drop for __SummerDynBox<'_> {
-    fn drop(&mut self) {
-        unsafe {
-            let vtable = &*self.vtable;
-            if let ::core::option::Option::Some(drop_fn) = vtable.drop {
-                drop_fn(self.data);
-            }
-            if vtable.size > 0 {
-                ::std::alloc::dealloc(
-                    self.data as *mut u8,
-                    ::std::alloc::Layout::from_size_align(vtable.size, vtable.align).unwrap(),
-                );
-            }
+impl DynSummer {
+    pub fn vtable<T: Summer>() -> &'static ::nola_abi_playground::VTable<Self> {
+        unsafe extern "C-unwind" fn __sum<T: Summer>(
+            ptr: *mut (),
+            v: ::nola_abi_playground::abi_safe::std::vec::Vec<i32>,
+        ) -> i32 {
+            Summer::sum(
+                unsafe { &mut *(ptr as *mut T) },
+                ::nola_abi_playground::AbiSafe::into_inner(v),
+            )
         }
+
+        &const { ::nola_abi_playground::VTable::new::<T>(DynSummer { sum: __sum::<T> }) }
+    }
+
+    pub fn new_box<T: Summer>(
+        value: ::std::boxed::Box<T>,
+    ) -> ::nola_abi_playground::DynBox<'static, Self> {
+        ::nola_abi_playground::DynBox::new(value, Self::vtable::<T>())
+    }
+
+    pub fn new_ref<T: Summer>(value: &T) -> ::nola_abi_playground::DynRef<'_, Self> {
+        ::nola_abi_playground::DynRef::new(value, Self::vtable::<T>())
+    }
+
+    pub fn new_ref_mut<T: Summer>(value: &mut T) -> ::nola_abi_playground::DynRefMut<'_, Self> {
+        ::nola_abi_playground::DynRefMut::new(value, Self::vtable::<T>())
     }
 }
 
-impl Summer for __SummerDynBox<'_> {
+impl Summer for ::nola_abi_playground::Dyn<'_, DynSummer> {
     fn sum(&mut self, v: ::std::vec::Vec<i32>) -> i32 {
         unsafe {
-            ((*self.vtable).__Summer_sum)(
-                self.data,
+            (self.vtable().methods().sum)(
+                self.data(),
                 ::nola_abi_playground::IntoAbiSafe::into_abi_safe(v),
             )
         }
@@ -78,31 +54,12 @@ impl Summer for __SummerDynBox<'_> {
 }
 
 #[doc(hidden)]
-#[allow(non_snake_case)]
-pub unsafe extern "C-unwind" fn __Summer_sum<T: Summer>(
-    ptr: *mut (),
-    v: ::nola_abi_playground::abi_safe::std::vec::Vec<i32>,
-) -> i32 {
-    unsafe { &mut *(ptr as *mut T) }.sum(::nola_abi_playground::AbiSafe::into_inner(v))
-}
-
-#[doc(hidden)]
+#[derive(::core::default::Default)]
 pub struct __NolaPlaygroundSymbols {
     pub doubled: ::core::sync::atomic::AtomicPtr<()>,
     pub summer1: ::core::sync::atomic::AtomicPtr<()>,
     pub summer2: ::core::sync::atomic::AtomicPtr<()>,
     pub favorite_number: ::core::sync::atomic::AtomicPtr<()>,
-}
-
-impl __NolaPlaygroundSymbols {
-    pub const fn new_null() -> Self {
-        Self {
-            doubled: ::core::sync::atomic::AtomicPtr::new(::core::ptr::null_mut()),
-            summer1: ::core::sync::atomic::AtomicPtr::new(::core::ptr::null_mut()),
-            summer2: ::core::sync::atomic::AtomicPtr::new(::core::ptr::null_mut()),
-            favorite_number: ::core::sync::atomic::AtomicPtr::new(::core::ptr::null_mut()),
-        }
-    }
 }
 
 pub trait StaticLibPath {
@@ -136,34 +93,32 @@ impl __LIB1_NolaPlayground {
     #[doc(hidden)]
     #[inline]
     fn __symbols() -> &'static __NolaPlaygroundSymbols {
-        unsafe extern "C-unwind" fn __doubled_thunk(
+        unsafe extern "C-unwind" fn __thunk_doubled(
             v: ::nola_abi_playground::abi_safe::std::vec::Vec<i32>,
         ) -> ::nola_abi_playground::abi_safe::std::vec::Vec<i32> {
-            let f = __LIB1_NolaPlayground::__doubled_resolve();
-            unsafe { f(v) }
+            unsafe { __LIB1_NolaPlayground::__resolve_doubled()(v) }
         }
 
-        unsafe extern "C-unwind" fn __summer1_thunk() -> __SummerDynBox<'static> {
-            let f = __LIB1_NolaPlayground::__summer1_resolve();
-            unsafe { f() }
+        unsafe extern "C-unwind" fn __thunk_summer1()
+        -> ::nola_abi_playground::DynBox<'static, DynSummer> {
+            unsafe { __LIB1_NolaPlayground::__resolve_summer1()() }
         }
 
-        unsafe extern "C-unwind" fn __summer2_thunk() -> __SummerDynBox<'static> {
-            let f = __LIB1_NolaPlayground::__summer2_resolve();
-            unsafe { f() }
+        unsafe extern "C-unwind" fn __thunk_summer2()
+        -> ::nola_abi_playground::DynBox<'static, DynSummer> {
+            unsafe { __LIB1_NolaPlayground::__resolve_summer2()() }
         }
 
-        unsafe extern "C-unwind" fn __favorite_number_thunk() -> usize {
-            let f = __LIB1_NolaPlayground::__favorite_number_resolve();
-            unsafe { f() }
+        unsafe extern "C-unwind" fn __thunk_favorite_number() -> usize {
+            unsafe { __LIB1_NolaPlayground::__resolve_favorite_number()() }
         }
 
         static __SYMBOLS: __NolaPlaygroundSymbols = __NolaPlaygroundSymbols {
-            doubled: ::core::sync::atomic::AtomicPtr::new(__doubled_thunk as *mut ()),
-            summer1: ::core::sync::atomic::AtomicPtr::new(__summer1_thunk as *mut ()),
-            summer2: ::core::sync::atomic::AtomicPtr::new(__summer2_thunk as *mut ()),
+            doubled: ::core::sync::atomic::AtomicPtr::new(__thunk_doubled as *mut ()),
+            summer1: ::core::sync::atomic::AtomicPtr::new(__thunk_summer1 as *mut ()),
+            summer2: ::core::sync::atomic::AtomicPtr::new(__thunk_summer2 as *mut ()),
             favorite_number: ::core::sync::atomic::AtomicPtr::new(
-                __favorite_number_thunk as *mut (),
+                __thunk_favorite_number as *mut (),
             ),
         };
 
@@ -184,10 +139,9 @@ impl __LIB1_NolaPlayground {
         &__DYLIB
     }
 
-    pub fn __doubled_resolve() -> unsafe extern "C-unwind" fn(
-                    ::nola_abi_playground::abi_safe::std::vec::Vec<i32>,
-                )
-    -> ::nola_abi_playground::abi_safe::std::vec::Vec<i32>{
+    pub fn __resolve_doubled() -> unsafe extern "C-unwind" fn(
+        ::nola_abi_playground::abi_safe::std::vec::Vec<i32>,
+    ) -> ::nola_abi_playground::abi_safe::std::vec::Vec<i32>{
         let ptr = Self::__dylib().symbol(c"__nola_0_1_0__doubled").as_ptr();
         Self::__symbols()
             .doubled
@@ -203,7 +157,8 @@ impl __LIB1_NolaPlayground {
         }
     }
 
-    pub fn __summer1_resolve() -> unsafe extern "C-unwind" fn() -> __SummerDynBox<'static> {
+    pub fn __resolve_summer1()
+    -> unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer> {
         let ptr = Self::__dylib()
             .symbol(c"__nola_0_1_0__get_summer1")
             .as_ptr();
@@ -213,12 +168,13 @@ impl __LIB1_NolaPlayground {
         unsafe {
             ::core::mem::transmute::<
                 *mut (),
-                unsafe extern "C-unwind" fn() -> __SummerDynBox<'static>,
+                unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer>,
             >(ptr)
         }
     }
 
-    pub fn __summer2_resolve() -> unsafe extern "C-unwind" fn() -> __SummerDynBox<'static> {
+    pub fn __resolve_summer2()
+    -> unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer> {
         let ptr = Self::__dylib()
             .symbol(c"__nola_0_1_0__get_summer2")
             .as_ptr();
@@ -228,12 +184,12 @@ impl __LIB1_NolaPlayground {
         unsafe {
             ::core::mem::transmute::<
                 *mut (),
-                unsafe extern "C-unwind" fn() -> __SummerDynBox<'static>,
+                unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer>,
             >(ptr)
         }
     }
 
-    pub fn __favorite_number_resolve() -> unsafe extern "C-unwind" fn() -> usize {
+    pub fn __resolve_favorite_number() -> unsafe extern "C-unwind" fn() -> usize {
         let ptr = Self::__dylib()
             .symbol(c"__nola_0_1_0__favorite_number")
             .as_ptr();
@@ -261,29 +217,29 @@ impl __LIB1_NolaPlayground {
         }
     }
 
-    pub fn summer1(&self) -> impl Summer + '_ {
+    pub fn summer1(&self) -> ::nola_abi_playground::DynBox<'_, DynSummer> {
         unsafe {
             (::core::mem::transmute::<
                 *mut (),
-                unsafe extern "C-unwind" fn() -> __SummerDynBox<'static>,
+                unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer>,
             >(
                 Self::__symbols()
                     .summer1
                     .load(::core::sync::atomic::Ordering::Relaxed),
-            ))() as __SummerDynBox<'_>
+            ))()
         }
     }
 
-    pub fn summer2(&self) -> impl Summer + '_ {
+    pub fn summer2(&self) -> ::nola_abi_playground::DynBox<'_, DynSummer> {
         unsafe {
             (::core::mem::transmute::<
                 *mut (),
-                unsafe extern "C-unwind" fn() -> __SummerDynBox<'static>,
+                unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer>,
             >(
                 Self::__symbols()
                     .summer2
                     .load(::core::sync::atomic::Ordering::Relaxed),
-            ))() as __SummerDynBox<'_>
+            ))()
         }
     }
 
@@ -307,7 +263,7 @@ impl NolaPlayground {
     pub fn load(path: impl ::core::convert::AsRef<::core::ffi::CStr>) -> Self {
         Self {
             dylib: ::nola_abi_playground::__Dylib::open(path),
-            symbols: __NolaPlaygroundSymbols::new_null(),
+            symbols: ::core::default::Default::default(),
         }
     }
 
@@ -340,7 +296,7 @@ impl NolaPlayground {
     }
 
     #[doc(hidden)]
-    pub fn __doubled_resolve(
+    pub fn __resolve_doubled(
         &self,
     ) -> ::core::result::Result<(), ::nola_abi_playground::ResolveError> {
         const NAME: &::core::ffi::CStr = c"__nola_0_1_0__doubled";
@@ -357,18 +313,18 @@ impl NolaPlayground {
         }
     }
 
-    pub fn summer1(&self) -> impl Summer + '_ {
-        let ptr = self.get_or_resolve(&self.symbols.summer1, c"__nola_0_1_0__get_summer1");
+    pub fn summer1(&self) -> ::nola_abi_playground::DynBox<'_, DynSummer> {
         unsafe {
-            let f: unsafe extern "C-unwind" fn() -> __SummerDynBox<'static> =
-                ::core::mem::transmute(ptr);
-            let result: __SummerDynBox<'_> = f();
-            result
+            (::core::mem::transmute::<
+                *mut (),
+                unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer>,
+            >(self.get_or_resolve(&self.symbols.summer1, c"__nola_0_1_0__get_summer1")))(
+            )
         }
     }
 
     #[doc(hidden)]
-    pub fn __summer1_resolve(
+    pub fn __resolve_summer1(
         &self,
     ) -> ::core::result::Result<(), ::nola_abi_playground::ResolveError> {
         const NAME: &::core::ffi::CStr = c"__nola_0_1_0__get_summer1";
@@ -385,18 +341,18 @@ impl NolaPlayground {
         }
     }
 
-    pub fn summer2(&self) -> impl Summer + '_ {
-        let ptr = self.get_or_resolve(&self.symbols.summer2, c"__nola_0_1_0__get_summer2");
+    pub fn summer2(&self) -> ::nola_abi_playground::DynBox<'_, DynSummer> {
         unsafe {
-            let f: unsafe extern "C-unwind" fn() -> __SummerDynBox<'static> =
-                ::core::mem::transmute(ptr);
-            let result: __SummerDynBox<'_> = f();
-            result
+            (::core::mem::transmute::<
+                *mut (),
+                unsafe extern "C-unwind" fn() -> ::nola_abi_playground::DynBox<'static, DynSummer>,
+            >(self.get_or_resolve(&self.symbols.summer2, c"__nola_0_1_0__get_summer2")))(
+            )
         }
     }
 
     #[doc(hidden)]
-    pub fn __summer2_resolve(
+    pub fn __resolve_summer2(
         &self,
     ) -> ::core::result::Result<(), ::nola_abi_playground::ResolveError> {
         const NAME: &::core::ffi::CStr = c"__nola_0_1_0__get_summer2";
@@ -425,7 +381,7 @@ impl NolaPlayground {
     }
 
     #[doc(hidden)]
-    pub fn __favorite_number_resolve(
+    pub fn __resolve_favorite_number(
         &self,
     ) -> ::core::result::Result<(), ::nola_abi_playground::ResolveError> {
         const NAME: &::core::ffi::CStr = c"__nola_0_1_0__favorite_number";

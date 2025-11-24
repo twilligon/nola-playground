@@ -41,14 +41,14 @@ pub extern "C-unwind" fn __nola_0_1_0__favorite_number() -> usize {
 
 #[unsafe(no_mangle)]
 pub extern "C-unwind" fn __nola_0_1_0__get_summer1()
--> ::nola_playground_lib::__SummerDynBox<'static> {
-    Summer::__into_dyn_box(Box::new(Summer1))
+-> ::nola_abi_playground::DynBox<'static, ::nola_playground_lib::DynSummer> {
+    ::nola_playground_lib::DynSummer::new_box(Box::new(Summer1))
 }
 
 #[unsafe(no_mangle)]
 pub extern "C-unwind" fn __nola_0_1_0__get_summer2()
--> ::nola_playground_lib::__SummerDynBox<'static> {
-    Summer::__into_dyn_box(Box::new(Summer2 { grand_total: 0 }))
+-> ::nola_abi_playground::DynBox<'static, ::nola_playground_lib::DynSummer> {
+    ::nola_playground_lib::DynSummer::new_box(Box::new(Summer2 { grand_total: 0 }))
 }
 
 #[unsafe(no_mangle)]

@@ -1,4 +1,5 @@
 use core::mem::ManuallyDrop;
+use std::vec::Vec as StdVec;
 
 pub use AbiVec as Vec;
 
@@ -12,23 +13,21 @@ pub struct AbiVec<T> {
 impl<T> Drop for AbiVec<T> {
     fn drop(&mut self) {
         unsafe {
-            drop(::std::vec::Vec::from_raw_parts(
-                self.ptr, self.len, self.cap,
-            ));
+            drop(StdVec::from_raw_parts(self.ptr, self.len, self.cap));
         }
     }
 }
 
 unsafe impl<T> crate::AbiRefSafe for AbiVec<T> {}
 
-unsafe impl<T> crate::AbiSafe<::std::vec::Vec<T>> for AbiVec<T> {
-    fn into_inner(self) -> ::std::vec::Vec<T> {
+unsafe impl<T> crate::AbiSafe<StdVec<T>> for AbiVec<T> {
+    fn into_inner(self) -> StdVec<T> {
         let abi = ManuallyDrop::new(self);
-        unsafe { ::std::vec::Vec::from_raw_parts(abi.ptr, abi.len, abi.cap) }
+        unsafe { StdVec::from_raw_parts(abi.ptr, abi.len, abi.cap) }
     }
 }
 
-impl<T> crate::IntoAbiSafe for ::std::vec::Vec<T> {
+impl<T> crate::IntoAbiSafe for StdVec<T> {
     type AbiRepr = AbiVec<T>;
 
     fn into_abi_safe(self) -> AbiVec<T> {
