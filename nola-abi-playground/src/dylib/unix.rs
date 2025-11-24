@@ -1,6 +1,6 @@
 use core::ffi::CStr;
 use core::ptr::NonNull;
-use libc::{RTLD_LAZY, RTLD_LOCAL, c_void, dlerror, dlopen, dlsym};
+use libc::{RTLD_LAZY, RTLD_LOCAL, c_void, dlclose, dlerror, dlopen, dlsym};
 
 pub struct __Dylib {
     handle: NonNull<c_void>,
@@ -14,8 +14,8 @@ impl __Dylib {
     #[cold]
     #[track_caller]
     fn fail(who: &str, what: impl AsRef<CStr>) -> ! {
-        let what = what.as_ref().to_string_lossy();
-
+        // only dlerror on platforms known to have MT-safe dlerror
+        // (i stole this from libloading lol)
         #[cfg(any(
             target_os = "linux",
             target_os = "android",
@@ -30,26 +30,34 @@ impl __Dylib {
         ))]
         if let Some(err) = NonNull::new(unsafe { dlerror() }) {
             let why = unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy();
-
-            panic!("{who} failed: {what}: {why}");
+            // `why` usually contains `what`
+            //panic!("{who} failed: {what}: {why}");
+            panic!("{who} failed: {why}");
         }
 
+        let what = what.as_ref().to_string_lossy();
         panic!("{who} failed: {what}");
     }
 
-    #[inline]
     pub fn open(path: impl AsRef<CStr>) -> Self {
         let ptr = unsafe { dlopen(path.as_ref().as_ptr(), RTLD_LAZY | RTLD_LOCAL) };
         let handle = NonNull::new(ptr).unwrap_or_else(|| Self::fail("dlopen", path));
-
         Self { handle }
     }
 
-    #[inline]
-    pub fn symbol(&self, name: impl AsRef<CStr>) -> NonNull<c_void> {
+    pub fn symbol(&self, name: impl AsRef<CStr>) -> NonNull<()> {
+        self.try_symbol(name.as_ref())
+            .unwrap_or_else(|| Self::fail("dlsym", name))
+    }
+
+    pub fn try_symbol(&self, name: impl AsRef<CStr>) -> Option<NonNull<()>> {
         let ptr = unsafe { dlsym(self.handle.as_ptr(), name.as_ref().as_ptr()) };
-        NonNull::new(ptr).unwrap_or_else(|| Self::fail("dlsym", name))
+        NonNull::new(ptr.cast())
     }
 }
 
-// why not impl Drop for __Dylib? see https://internals.rust-lang.org/t/15169
+impl Drop for __Dylib {
+    fn drop(&mut self) {
+        unsafe { dlclose(self.handle.as_ptr()) };
+    }
+}

@@ -35,12 +35,19 @@ fn doubled(v: Vec<i32>) -> Vec<i32> {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C-unwind" fn __nola_0_1_0__get_summer1() -> ::nola_playground_lib::__SummerDynBox {
+pub extern "C-unwind" fn __nola_0_1_0__favorite_number() -> usize {
+    196883
+}
+
+#[unsafe(no_mangle)]
+pub extern "C-unwind" fn __nola_0_1_0__get_summer1()
+-> ::nola_playground_lib::__SummerDynBox<'static> {
     Summer::__into_dyn_box(Box::new(Summer1))
 }
 
 #[unsafe(no_mangle)]
-pub extern "C-unwind" fn __nola_0_1_0__get_summer2() -> ::nola_playground_lib::__SummerDynBox {
+pub extern "C-unwind" fn __nola_0_1_0__get_summer2()
+-> ::nola_playground_lib::__SummerDynBox<'static> {
     Summer::__into_dyn_box(Box::new(Summer2 { grand_total: 0 }))
 }
 

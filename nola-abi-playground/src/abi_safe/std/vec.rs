@@ -12,21 +12,23 @@ pub struct AbiVec<T> {
 impl<T> Drop for AbiVec<T> {
     fn drop(&mut self) {
         unsafe {
-            drop(Vec::from_raw_parts(self.ptr, self.len, self.cap));
+            drop(::std::vec::Vec::from_raw_parts(
+                self.ptr, self.len, self.cap,
+            ));
         }
     }
 }
 
 unsafe impl<T> crate::AbiRefSafe for AbiVec<T> {}
 
-unsafe impl<T> crate::AbiSafe<Vec<T>> for AbiVec<T> {
-    fn into_inner(self) -> Vec<T> {
+unsafe impl<T> crate::AbiSafe<::std::vec::Vec<T>> for AbiVec<T> {
+    fn into_inner(self) -> ::std::vec::Vec<T> {
         let abi = ManuallyDrop::new(self);
-        unsafe { Vec::from_raw_parts(abi.ptr, abi.len, abi.cap) }
+        unsafe { ::std::vec::Vec::from_raw_parts(abi.ptr, abi.len, abi.cap) }
     }
 }
 
-impl<T> crate::IntoAbiSafe for Vec<T> {
+impl<T> crate::IntoAbiSafe for ::std::vec::Vec<T> {
     type AbiRepr = AbiVec<T>;
 
     fn into_abi_safe(self) -> AbiVec<T> {
